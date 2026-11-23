@@ -133,6 +133,21 @@ _rconf
 _systemd
 echo_progress_done
 
+# Set up users that existed before rTorrent was installed. box adduser handles users added later.
+master=$user
+readarray -t users < <(_get_user_list)
+for user in "${users[@]}"; do
+    [[ $user == "$master" ]] && continue
+    echo_progress_start "Setting up rTorrent for ${user}"
+    port=$((RANDOM % 64025 + 1024))
+    portend=$((port + 1500))
+    _makedirs
+    _rconf
+    systemctl enable -q --now rtorrent@${user} 2>> $log
+    echo_progress_done
+done
+user=$master
+
 if [[ -n $noexec ]]; then
     mount -o remount,noexec /tmp
 fi

@@ -6,7 +6,7 @@ if [[ -f /install/.rutorrent.lock || -f /install/.flood.lock ]]; then
         exit 0
     fi
 fi
-for u in ${users}; do
+for u in "${users[@]}"; do
     systemctl disable -q rtorrent@${u}
     systemctl stop -q rtorrent@${u}
     rm -f /home/${u}/.rtorrent.rc

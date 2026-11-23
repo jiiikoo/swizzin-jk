@@ -3,7 +3,10 @@
 function _download() {
     echo_progress_start "Downloading install script"
     cd /tmp
-    wget https://nzbget.com/download/nzbget-latest-bin-linux.run >> $log 2>&1
+    wget -O /tmp/nzbget-latest-bin-linux.run https://nzbget.com/download/nzbget-latest-bin-linux.run >> "$log" 2>&1 || {
+        echo_error "Failed to download the nzbget installer"
+        exit 1
+    }
     echo_progress_done
 }
 

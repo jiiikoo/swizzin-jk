@@ -18,7 +18,11 @@ function _install() {
     cd /tmp
     for u in "${users[@]}"; do
         echo_progress_start "Installing nzbget for $u"
-        sh nzbget-latest-bin-linux.run --destdir /home/$u/nzbget >> $log 2>&1
+        sh nzbget-latest-bin-linux.run --destdir /home/$u/nzbget >> "$log" 2>&1
+        if [[ ! -x /home/$u/nzbget/nzbget || ! -f /home/$u/nzbget/nzbget.conf ]]; then
+            echo_error "nzbget installer failed for $u. Check $log"
+            exit 1
+        fi
         chown -R $u:$u /home/$u/nzbget
         if [[ $u == $master ]]; then
             :
@@ -53,7 +57,7 @@ function _install() {
     fi
 
     echo_progress_start "Enabling nzbget for all users"
-    for u in ${users}; do
+    for u in "${users[@]}"; do
         systemctl enable -q nzbget@$u 2>&1 | tee -a $log
         systemctl start nzbget@$u
     done
@@ -65,7 +69,7 @@ function _cleanup() {
     rm -rf nzbget-latest-bin-linux.run
 }
 
-users=$(_get_user_list)
+readarray -t users < <(_get_user_list)
 master=$(_get_master_username)
 noexec=$(grep "/tmp" /etc/fstab | grep noexec)
 

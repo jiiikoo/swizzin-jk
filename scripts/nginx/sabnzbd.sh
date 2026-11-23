@@ -26,8 +26,21 @@ location /sabnzbd {
 SAB
 fi
 
-sed -i "s|^host = .*|host = 127.0.0.1|g" /home/${user}/.config/sabnzbd/sabnzbd.ini
-sed -i 's/^\s*url_base\s*=\s*""\s*$/url_base = "\/sabnzbd"/' /home/${user}/.config/sabnzbd/sabnzbd.ini
+sabini="/home/${user}/.config/sabnzbd/sabnzbd.ini"
+sed -i "s|^host = .*|host = 127.0.0.1|g" "$sabini"
+# SABnzbd defaults url_base to "" and may not write the key at all, so set it or add it under [misc]
+if grep -qE '^\s*url_base\s*=' "$sabini"; then
+    sed -i -E 's|^\s*url_base\s*=.*|url_base = /sabnzbd|' "$sabini"
+else
+    sed -i 's|^\[misc\]$|[misc]\nurl_base = /sabnzbd|' "$sabini"
+fi
+# Behind nginx, SABnzbd sees the real client IP from X-Forwarded-For and denies external clients by default.
+# Level 4 allows the full web UI. The SABnzbd login and nginx basic auth stay in place.
+if grep -qE '^\s*inet_exposure\s*=' "$sabini"; then
+    sed -i -E 's|^\s*inet_exposure\s*=.*|inet_exposure = 4|' "$sabini"
+else
+    sed -i 's|^\[misc\]$|[misc]\ninet_exposure = 4|' "$sabini"
+fi
 
 if [[ $active == "active" ]]; then
     systemctl start sabnzbd

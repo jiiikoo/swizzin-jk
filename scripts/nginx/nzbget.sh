@@ -21,14 +21,21 @@ NRP
 fi
 
 for u in "${users[@]}"; do
+    # Skip users that do not have nzbget (yet), otherwise the upstream gets an empty port and nginx fails to load
+    [[ -f /home/$u/nzbget/nzbget.conf ]] || continue
     isactive=$(systemctl is-active nzbget@$u)
     sed -i "s/SecureControl=yes/SecureControl=no/g" /home/$u/nzbget/nzbget.conf
     sed -i "s/ControlIP=0.0.0.0/ControlIP=127.0.0.1/g" /home/$u/nzbget/nzbget.conf
     sed -i "s/ControlUsername=nzbget/ControlUsername=/g" /home/$u/nzbget/nzbget.conf
     sed -i "s/ControlPassword=tegbzn6789/ControlPassword=/g" /home/$u/nzbget/nzbget.conf
 
-    if [[ ! -f /etc/nginx/conf.d/${u}.nzbget.conf ]]; then
-        NZBPORT=$(grep ControlPort /home/$u/nzbget/nzbget.conf | cut -d= -f2)
+    # Also rewrite an upstream that an earlier run left without a port
+    if [[ ! -f /etc/nginx/conf.d/${u}.nzbget.conf ]] || grep -q '127.0.0.1:;' /etc/nginx/conf.d/${u}.nzbget.conf; then
+        NZBPORT=$(grep '^ControlPort=' /home/$u/nzbget/nzbget.conf | cut -d= -f2)
+        if [[ ! $NZBPORT =~ ^[0-9]+$ ]]; then
+            echo_warn "Could not read the nzbget ControlPort for $u, skipping its nginx upstream"
+            continue
+        fi
         cat > /etc/nginx/conf.d/${u}.nzbget.conf << NZBUPS
 upstream $u.nzbget {
   server 127.0.0.1:$NZBPORT;
